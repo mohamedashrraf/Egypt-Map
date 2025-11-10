@@ -1,0 +1,15 @@
+{
+  "mapImage": "images/map.png",
+  "points": {
+    "point_cairo": { "x": 523.45, "y": 195.5 },
+    "point_med": { "x": 444.5, "y": 133.2 },
+    "point_red": { "x": 671.85, "y": 350.3 },
+    "point_nile": { "x": 520.25, "y": 312.8 }
+  },
+  "questions": [
+    { "name": "القاهرة", "answer": "point_cairo" },
+    { "name": "البحر المتوسط", "answer": "point_med" },
+    { "name": "البحر الأحمر", "answer": "point_red" },
+    { "name": "نهر النيل", "answer": "point_nile" }
+  ]
+}
