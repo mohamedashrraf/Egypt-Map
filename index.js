@@ -151,26 +151,28 @@ if (reversed == null) { reversed = false; }
 		createjs.Touch.enable(stage);
 		stage.mouseChildren = true;
 		this.stop();
-		var gameStage = this;
 		
+		var gameStage = this;
 		var questionTxt = gameStage.question;
 		var feedbackTxt = gameStage.feedback;
 		var resetBtn = gameStage.resetBtn;
 		var mapHolder = gameStage.mapHolder;
+		
 		resetBtn.visible = false;
 		
-		var points = {}; 
+		var points = {}; // سيتم تخزين كل النقاط المنشأة هنا
 		var questions = [];
 		var currentQuestion = 0;
 		
+		// رسالة تحميل
 		questionTxt.text = "⏳ جاري تحميل البيانات...";
 		feedbackTxt.text = "";
 		
+		// ✅ تحميل JSON والصورة باستخدام LoadQueue (يعمل بدون سيرفر)
 		var queue = new createjs.LoadQueue();
 		queue.on("fileload", handleFileLoad);
 		queue.on("complete", handleComplete);
 		queue.on("error", handleError);
-		
 		queue.loadFile({ id: "data", src: "data.json" });
 		
 		function handleFileLoad(evt) {
@@ -181,19 +183,21 @@ if (reversed == null) { reversed = false; }
 		      return;
 		    }
 		
-		    console.log("✅ JSON:", data);
+		    console.log("✅ تم تحميل JSON:", data);
 		
 		    questions = data.questions || [];
 		    var mapPath = data.mapImage;
-		    var pointsData = data.points; // ← المواقع من JSON
+		    var pointsData = data.points;
 		
 		    if (!mapPath) {
 		      questionTxt.text = "❌ لم يتم العثور على mapImage";
 		      return;
 		    }
 		
+		    // تحميل صورة الخريطة
 		    queue.loadFile({ id: "mapImage", src: mapPath });
 		
+		    // إنشاء النقاط إن وجدت
 		    if (pointsData) {
 		      createPoints(pointsData);
 		    }
@@ -226,6 +230,8 @@ if (reversed == null) { reversed = false; }
 		function createPoints(pointsData) {
 		  Object.keys(pointsData).forEach(function(key) {
 		    var pData = pointsData[key];
+		
+		    // إنشاء دائرة بسيطة لكل نقطة
 		    var shape = new createjs.Shape();
 		    shape.graphics.beginFill("#ffcc00").drawCircle(0, 0, 10);
 		    shape.x = pData.x;
@@ -233,6 +239,7 @@ if (reversed == null) { reversed = false; }
 		    shape.name = key;
 		    shape.cursor = "pointer";
 		
+		    // تأثير نبض مستمر
 		    createjs.Tween.get(shape, { loop: true })
 		      .to({ scaleX: 1.2, scaleY: 1.2 }, 700, createjs.Ease.sineInOut)
 		      .to({ scaleX: 1, scaleY: 1 }, 700, createjs.Ease.sineInOut);
@@ -287,7 +294,6 @@ if (reversed == null) { reversed = false; }
 		    p.mouseEnabled = true;
 		    p.alpha = 1;
 		    p.shadow = null;
-		
 		    p.removeAllEventListeners("click");
 		    p.on("click", function() {
 		      handleAnswer(p.name);
@@ -324,7 +330,8 @@ if (reversed == null) { reversed = false; }
 		  }
 		}
 		
-		
+		// ------------------------------
+		// ------------------------------
 		function showGlow(pointName, color) {
 		  var p = points[pointName];
 		  if (!p) return;
@@ -345,6 +352,7 @@ if (reversed == null) { reversed = false; }
 		}
 		
 		// ------------------------------
+		// 🔁 إعادة اللعبة
 		// ------------------------------
 		function reset() {
 		  createjs.Sound.play("ClickSound");
@@ -435,7 +443,7 @@ lib.properties = {
 	color: "#FFFFFF",
 	opacity: 1.00,
 	manifest: [
-		{src:"images/index_atlas_1.png?1762785923738", id:"index_atlas_1"}
+		{src:"images/index_atlas_1.png?1762857562972", id:"index_atlas_1"}
 	],
 	preloads: []
 };
