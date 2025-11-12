@@ -3,7 +3,7 @@
 var p; // shortcut to reference prototypes
 var lib={};var ss={};var img={};
 lib.ssMetadata = [
-		{name:"index_atlas_1", frames: [[0,548,214,95],[0,0,670,546]]}
+		{name:"index_atlas_1", frames: [[0,0,214,95]]}
 ];
 
 
@@ -30,13 +30,6 @@ lib.ssMetadata = [
 (lib.CachedBmp_1 = function() {
 	this.initialize(ss["index_atlas_1"]);
 	this.gotoAndStop(0);
-}).prototype = p = new cjs.Sprite();
-
-
-
-(lib.map = function() {
-	this.initialize(ss["index_atlas_1"]);
-	this.gotoAndStop(1);
 }).prototype = p = new cjs.Sprite();
 // helper functions:
 
@@ -78,29 +71,6 @@ if (reversed == null) { reversed = false; }
 
 }).prototype = p = new cjs.MovieClip();
 p.nominalBounds = new cjs.Rectangle(0,0,107,47.5);
-
-
-(lib.point = function(mode,startPosition,loop,reversed) {
-if (loop == null) { loop = true; }
-if (reversed == null) { reversed = false; }
-	var props = new Object();
-	props.mode = mode;
-	props.startPosition = startPosition;
-	props.labels = {};
-	props.loop = loop;
-	props.reversed = reversed;
-	cjs.MovieClip.apply(this,[props]);
-
-	// Layer_1
-	this.shape = new cjs.Shape();
-	this.shape.graphics.f("#24EEFC").s().p("AhFBGQgegdAAgpQAAgoAegdQAcgeApAAQAqAAAdAeQAdAdAAAoQAAApgdAdQgdAegqAAQgpAAgcgeg");
-	this.shape.setTransform(10,10);
-
-	this.timeline.addTween(cjs.Tween.get(this.shape).wait(1));
-
-	this._renderFirstFrame();
-
-}).prototype = getMCSymbolPrototype(lib.point, new cjs.Rectangle(0,0,20,20), null);
 
 
 (lib.mapHolder = function(mode,startPosition,loop,reversed) {
@@ -160,52 +130,78 @@ if (reversed == null) { reversed = false; }
 		
 		resetBtn.visible = false;
 		
-		var points = {}; // سيتم تخزين كل النقاط المنشأة هنا
+		var points = {};
 		var questions = [];
 		var currentQuestion = 0;
 		
-		// رسالة تحميل
 		questionTxt.text = "⏳ جاري تحميل البيانات...";
 		feedbackTxt.text = "";
 		
-		// ✅ تحميل JSON والصورة باستخدام LoadQueue (يعمل بدون سيرفر)
 		var queue = new createjs.LoadQueue();
 		queue.on("fileload", handleFileLoad);
 		queue.on("complete", handleComplete);
 		queue.on("error", handleError);
-		queue.loadFile({ id: "data", src: "data.json" });
+		
+		try {
+		  var xhr = new XMLHttpRequest();
+		  xhr.open("GET", "data.json", false);
+		  xhr.send();
+		  if (xhr.status === 200) {
+		    try {
+		      var parsed = JSON.parse(xhr.responseText);
+		      queue.loadFile({ id: "data", src: "data.json" });
+		    } catch (jsonErr) {
+		      console.error("❌ خطأ في صيغة JSON:", jsonErr.message);
+		      questionTxt.text = "⚠️ خطأ في صيغة ملف JSON";
+		      return;
+		    }
+		  } else {
+		    questionTxt.text = "❌ تعذر العثور على ملف data.json";
+		    return;
+		  }
+		} catch (xhrErr) {
+		  console.error("❌ فشل تحميل JSON:", xhrErr);
+		  questionTxt.text = "❌ فشل تحميل ملف JSON";
+		  return;
+		}
 		
 		function handleFileLoad(evt) {
 		  if (evt.item.id === "data") {
 		    var data = evt.result;
-		    if (!data) {
-		      questionTxt.text = "❌ فشل قراءة JSON";
+		
+		    if (!data || typeof data !== "object") {
+		      questionTxt.text = "❌ JSON غير صالح أو فارغ";
 		      return;
 		    }
 		
-		    console.log("✅ تم تحميل JSON:", data);
+		    console.log("✅ JSON محمل:", data);
 		
 		    questions = data.questions || [];
 		    var mapPath = data.mapImage;
 		    var pointsData = data.points;
 		
-		    if (!mapPath) {
-		      questionTxt.text = "❌ لم يتم العثور على mapImage";
+		    if (!mapPath || typeof mapPath !== "string") {
+		      questionTxt.text = "⚠️ ملف JSON لا يحتوي على mapImage الصحيح";
 		      return;
 		    }
 		
-		    // تحميل صورة الخريطة
+		    if (!pointsData || typeof pointsData !== "object") {
+		      questionTxt.text = "⚠️ لم يتم العثور على (points) داخل JSON";
+		      return;
+		    }
+		
 		    queue.loadFile({ id: "mapImage", src: mapPath });
 		
-		    // إنشاء النقاط إن وجدت
-		    if (pointsData) {
-		      createPoints(pointsData);
-		    }
+		    createPoints(pointsData);
 		  }
 		
 		  if (evt.item.id === "mapImage") {
 		    var img = evt.result;
-		    if (img) loadMapIntoHolder(img);
+		    if (img) {
+		      loadMapIntoHolder(img);
+		    } else {
+		      questionTxt.text = "❌ فشل تحميل صورة الخريطة";
+		    }
 		  }
 		}
 		
@@ -216,13 +212,13 @@ if (reversed == null) { reversed = false; }
 		    questions.sort(() => Math.random() - 0.5);
 		    startQuestion();
 		  } else {
-		    questionTxt.text = "❌ لم يتم تحميل الأسئلة";
+		    questionTxt.text = "⚠️ لم يتم تحميل أي أسئلة من JSON";
 		  }
 		}
 		
 		function handleError(evt) {
 		  console.error("⚠️ خطأ في التحميل:", evt.text);
-		  questionTxt.text = "❌ فشل تحميل البيانات أو الصورة";
+		  questionTxt.text = "❌ حدث خطأ أثناء تحميل البيانات أو الصورة";
 		}
 		
 		// ------------------------------
@@ -231,7 +227,11 @@ if (reversed == null) { reversed = false; }
 		  Object.keys(pointsData).forEach(function(key) {
 		    var pData = pointsData[key];
 		
-		    // إنشاء دائرة بسيطة لكل نقطة
+		    if (typeof pData.x !== "number" || typeof pData.y !== "number") {
+		      console.warn("⚠️ نقطة غير صالحة:", key);
+		      return;
+		    }
+		
 		    var shape = new createjs.Shape();
 		    shape.graphics.beginFill("#ffcc00").drawCircle(0, 0, 10);
 		    shape.x = pData.x;
@@ -239,7 +239,6 @@ if (reversed == null) { reversed = false; }
 		    shape.name = key;
 		    shape.cursor = "pointer";
 		
-		    // تأثير نبض مستمر
 		    createjs.Tween.get(shape, { loop: true })
 		      .to({ scaleX: 1.2, scaleY: 1.2 }, 700, createjs.Ease.sineInOut)
 		      .to({ scaleX: 1, scaleY: 1 }, 700, createjs.Ease.sineInOut);
@@ -254,6 +253,7 @@ if (reversed == null) { reversed = false; }
 		function loadMapIntoHolder(img) {
 		  if (!mapHolder) {
 		    console.error("❌ لا يوجد mapHolder");
+		    questionTxt.text = "⚠️ لا يوجد عنصر mapHolder ";
 		    return;
 		  }
 		
@@ -273,7 +273,6 @@ if (reversed == null) { reversed = false; }
 		  bmp.y = (holderH - ih * scale) / 2;
 		
 		  mapHolder.addChild(bmp);
-		
 		  bmp.alpha = 0;
 		  createjs.Tween.get(bmp).to({ alpha: 1 }, 600);
 		}
@@ -310,9 +309,7 @@ if (reversed == null) { reversed = false; }
 		    feedbackTxt.text = "أحسنت ✅";
 		    createjs.Sound.play("correctSound");
 		    showGlow(selectedName, "#00FF00");
-		
-		    Object.values(points).forEach(p => p.mouseEnabled = false);
-		
+		    Object.values(points).forEach(p => (p.mouseEnabled = false));
 		    setTimeout(() => {
 		      feedbackTxt.text = "";
 		      currentQuestion++;
@@ -323,7 +320,6 @@ if (reversed == null) { reversed = false; }
 		    feedbackTxt.text = "خطأ ❌";
 		    createjs.Sound.play("wrongSound");
 		    showGlow(selectedName, "#FF0000");
-		
 		    setTimeout(() => {
 		      feedbackTxt.text = "";
 		    }, 1000);
@@ -335,7 +331,6 @@ if (reversed == null) { reversed = false; }
 		function showGlow(pointName, color) {
 		  var p = points[pointName];
 		  if (!p) return;
-		
 		  p.shadow = new createjs.Shadow(color, 0, 0, 20);
 		  setTimeout(() => {
 		    p.shadow = null;
@@ -352,21 +347,18 @@ if (reversed == null) { reversed = false; }
 		}
 		
 		// ------------------------------
-		// 🔁 إعادة اللعبة
 		// ------------------------------
 		function reset() {
 		  createjs.Sound.play("ClickSound");
 		  feedbackTxt.text = "";
 		  questionTxt.text = "";
 		  resetBtn.visible = false;
-		
 		  Object.values(points).forEach(p => {
 		    p.shadow = null;
 		    p.alpha = 1;
 		    p.mouseEnabled = true;
 		    p.cursor = "pointer";
 		  });
-		
 		  questions.sort(() => Math.random() - 0.5);
 		  currentQuestion = 0;
 		  startQuestion();
@@ -382,22 +374,6 @@ if (reversed == null) { reversed = false; }
 	this.timeline.addTween(cjs.Tween.get(this).call(this.frame_0).wait(1));
 
 	// flash0_ai
-	this.point_med = new lib.point();
-	this.point_med.name = "point_med";
-	this.point_med.setTransform(-103.6,836.9,1,1,0,0,0,10,10);
-
-	this.point_nile = new lib.point();
-	this.point_nile.name = "point_nile";
-	this.point_nile.setTransform(-27.85,1016.5,1,1,0,0,0,10,10);
-
-	this.point_red = new lib.point();
-	this.point_red.name = "point_red";
-	this.point_red.setTransform(123.75,1054,1,1,0,0,0,10,10);
-
-	this.point_cairo = new lib.point();
-	this.point_cairo.name = "point_cairo";
-	this.point_cairo.setTransform(-24.65,899.2,1,1,0,0,0,10,10);
-
 	this.resetBtn = new lib.Symbol59();
 	this.resetBtn.name = "resetBtn";
 	this.resetBtn.setTransform(923.1,343.1,1,1,0,0,0,53.6,23.9);
@@ -414,26 +390,23 @@ if (reversed == null) { reversed = false; }
 	this.question.name = "question";
 	this.question.textAlign = "center";
 	this.question.lineHeight = 54;
-	this.question.lineWidth = 186;
+	this.question.lineWidth = 284;
 	this.question.parent = this;
-	this.question.setTransform(539.35,53.75);
+	this.question.setTransform(544.25,53.75);
 
-	this.timeline.addTween(cjs.Tween.get({}).to({state:[{t:this.question},{t:this.feedback},{t:this.resetBtn},{t:this.point_cairo},{t:this.point_red},{t:this.point_nile},{t:this.point_med}]}).wait(1));
+	this.timeline.addTween(cjs.Tween.get({}).to({state:[{t:this.question},{t:this.feedback},{t:this.resetBtn}]}).wait(1));
 
 	// Layer_1
 	this.mapHolder = new lib.mapHolder();
 	this.mapHolder.name = "mapHolder";
 	this.mapHolder.setTransform(523,335,1,1,0,0,0,300,225);
 
-	this.instance = new lib.map();
-	this.instance.setTransform(212,817,0.8955,0.8242);
-
-	this.timeline.addTween(cjs.Tween.get({}).to({state:[{t:this.instance},{t:this.mapHolder}]}).wait(1));
+	this.timeline.addTween(cjs.Tween.get(this.mapHolder).wait(1));
 
 	this._renderFirstFrame();
 
 }).prototype = p = new lib.AnMovieClip();
-p.nominalBounds = new cjs.Rectangle(398.4,339.8,601.6,927.2);
+p.nominalBounds = new cjs.Rectangle(735,339.8,265,220.2);
 // library properties:
 lib.properties = {
 	id: '0BAB9D2A768A8345A5F2AB5D96FC43BA',
@@ -443,7 +416,7 @@ lib.properties = {
 	color: "#FFFFFF",
 	opacity: 1.00,
 	manifest: [
-		{src:"images/index_atlas_1.png?1762857562972", id:"index_atlas_1"}
+		{src:"images/index_atlas_1.png?1762938376065", id:"index_atlas_1"}
 	],
 	preloads: []
 };
